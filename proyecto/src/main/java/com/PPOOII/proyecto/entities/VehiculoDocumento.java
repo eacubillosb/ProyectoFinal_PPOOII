@@ -1,0 +1,110 @@
+// Paquete de entidades del dominio
+package com.PPOOII.proyecto.entities;
+
+import com.PPOOII.proyecto.entities.converters.Base64BlobConverter;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import org.hibernate.annotations.Check;
+import java.io.Serializable;
+import java.time.LocalDate;
+
+// Entidad JPA que modela la relación de asociación entre un Vehículo y un Documento
+// Contiene los atributos complementarios: fechas de expedición, vencimiento, estado y archivo PDF en Base64 (LONGBLOB)
+@Entity
+@Table(name = "vehiculo_documento")
+@Check(constraints = "estado IN ('Habilitado', 'Vencido', 'En Verificación')")
+public class VehiculoDocumento implements Serializable {
+
+    // Identificador de versión de serialización según el Laboratorio 1
+    private static final long serialVersionUID = 1L;
+
+    // Identificador único del registro de documento asociado al vehículo
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+
+    // Relación muchos a uno con Vehículo
+    // @JsonBackReference evita ciclos infinitos durante la serialización JSON
+    @ManyToOne
+    @JoinColumn(name = "vehiculo_id", nullable = false)
+    @JsonBackReference
+    private Vehiculo vehiculo;
+
+    // Relación muchos a uno con el documento de catálogo parametrizado
+    @NotNull(message = "El documento referenciado no puede ser nulo")
+    @ManyToOne
+    @JoinColumn(name = "documento_id", nullable = false)
+    private Documento documento;
+
+    // Fecha en la cual fue expedido o emitido el documento
+    @NotNull(message = "La fecha de expedición no puede ser nula")
+    @Column(name = "fecha_expedicion", nullable = false)
+    private LocalDate fechaExpedicion;
+
+    // Fecha en la cual caduca o vence el documento
+    @NotNull(message = "La fecha de vencimiento no puede ser nula")
+    @Column(name = "fecha_vencimiento", nullable = false)
+    private LocalDate fechaVencimiento;
+
+    // Estado del documento para el vehículo: 'Habilitado', 'Vencido' o 'En Verificación'
+    // Por requerimiento, el estado inicial al registrar el vehículo es 'En Verificación'
+    @NotBlank(message = "El estado no puede estar vacío")
+    @Pattern(regexp = "^(Habilitado|Vencido|En Verificación)$", message = "El estado del documento debe ser 'Habilitado', 'Vencido' o 'En Verificación'")
+    @Column(nullable = false, length = 20)
+    private String estado = "En Verificación";
+
+    // Campo BLOB (LONGBLOB) para almacenar el archivo PDF en formato Base64 (Entrega 2)
+    @Convert(converter = Base64BlobConverter.class)
+    @Column(name = "documento_pdf_base64", columnDefinition = "LONGBLOB")
+    private String documentoPdfBase64;
+
+    // Constructor vacío por defecto requerido por JPA
+    public VehiculoDocumento() {}
+
+    // Métodos Getter y Setter para manipular los atributos de la relación
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    public Vehiculo getVehiculo() { return vehiculo; }
+    public void setVehiculo(Vehiculo vehiculo) { this.vehiculo = vehiculo; }
+
+    public Documento getDocumento() { return documento; }
+    public void setDocumento(Documento documento) { this.documento = documento; }
+
+    public LocalDate getFechaExpedicion() { return fechaExpedicion; }
+    public void setFechaExpedicion(LocalDate fechaExpedicion) { this.fechaExpedicion = fechaExpedicion; }
+
+    public LocalDate getFechaVencimiento() { return fechaVencimiento; }
+    public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) {
+        this.estado = (estado == null || estado.trim().isEmpty()) ? "En Verificación" : estado.trim();
+    }
+
+    public String getDocumentoPdfBase64() {
+        return documentoPdfBase64;
+    }
+
+    public void setDocumentoPdfBase64(String documentoPdfBase64) {
+        this.documentoPdfBase64 = documentoPdfBase64;
+    }
+
+    @Transient
+    public Integer getVehiculoId() {
+        return vehiculo != null ? vehiculo.getId() : null;
+    }
+
+    @Transient
+    public String getVehiculoPlaca() {
+        return vehiculo != null ? vehiculo.getPlaca() : null;
+    }
+
+    @Override // Sobrescribe el método toString según el Laboratorio 1
+    public String toString() { // Representación textual de VehiculoDocumento
+        return "VehiculoDocumento [id=" + this.id + ", estado=" + this.estado + ", fechaExpedicion=" + this.fechaExpedicion + ", fechaVencimiento=" + this.fechaVencimiento + "]";
+    }
+}
